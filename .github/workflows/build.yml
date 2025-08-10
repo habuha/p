@@ -38,16 +38,21 @@ jobs:
         export ANDROID_HOME=$PWD/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses
-        sdkmanager --sdk_root=$ANDROID_HOME "build-tools;33.0.2" "platform-tools" "platforms;android-33"
-        sdkmanager --sdk_root=$ANDROID_HOME "cmdline-tools;latest"
-        sdkmanager "build-tools;30.0.3" "platform-tools" "platforms;android-30"
+        # 安装指定版本的构建工具（兼容Kivy）
+        sdkmanager --sdk_root=$ANDROID_HOME "build-tools;34.0.0" "platform-tools" "platforms;android-34"
         
     - name: Build APK
       run: |
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
+        # 更新buildozer.spec配置
         sed -i "s/^requirements = .*/requirements = python3,kivy/" buildozer.spec
+        sed -i "s/^android.sdk_build_tools = .*/android.sdk_build_tools = 34.0.0/" buildozer.spec
+        sed -i "s/^android.ndk_version = .*/android.ndk_version = 23b/" buildozer.spec
+        
+        # 添加缺失的AIDL路径到环境变量
+        echo "PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_ENV
         buildozer -v android debug
         
     - name: Upload APK
