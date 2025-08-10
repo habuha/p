@@ -29,30 +29,49 @@ jobs:
     - name: Accept Android licenses
       run: |
         mkdir -p ~/.android
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > ~/.android/android-sdk-license
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ~/.android/android-sdk-license
-        echo "8933bad161af4178b1185d1a37fbf41ea5269c55" >> ~/.android/android-sdk-license
+        # 添加所有已知许可密钥
+        licenses=(
+          "d56f5187479451eabf01fb78af6dfcb131a6481e"
+          "24333f8a63b6825ea9c5514f83c2829b004d1fee"
+          "8933bad161af4178b1185d1a37fbf41ea5269c55"
+          "84831b9409646a918e30573bab4c9c91346d8abd"
+          "33b6a2b64607f17b7f70166ebd0ae76d7d9a1c9f"
+          "e9acab5b5fbb560a72cfaecce8946896ff6aab9d"
+        )
+        for license in "${licenses[@]}"; do
+          echo "$license" >> ~/.android/android-sdk-license
+        done
         
     - name: Install Android SDK
       run: |
         export ANDROID_HOME=$PWD/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        
+        # 确保目录存在
+        mkdir -p $ANDROID_HOME
+        
+        # 强制接受所有许可
         yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses
-        # 安装指定版本的构建工具（兼容Kivy）
         sdkmanager --sdk_root=$ANDROID_HOME "build-tools;34.0.0" "platform-tools" "platforms;android-34"
+        
+        # 验证安装
+        $ANDROID_HOME/build-tools/34.0.0/aidl --version
         
     - name: Build APK
       run: |
+        export ANDROID_HOME=$PWD/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0
+        
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
+        
         # 更新buildozer.spec配置
         sed -i "s/^requirements = .*/requirements = python3,kivy/" buildozer.spec
         sed -i "s/^android.sdk_build_tools = .*/android.sdk_build_tools = 34.0.0/" buildozer.spec
         sed -i "s/^android.ndk_version = .*/android.ndk_version = 23b/" buildozer.spec
+        sed -i "s/^p4a.branch = .*/p4a.branch = master/" buildozer.spec
         
-        # 添加缺失的AIDL路径到环境变量
-        echo "PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_ENV
         buildozer -v android debug
         
     - name: Upload APK
