@@ -21,7 +21,9 @@ jobs:
         
     - name: Build APK
       run: |
-        buildozer init
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
         sed -i "s/^requirements = .*/requirements = python3,kivy/" buildozer.spec
         buildozer -v android debug
         
